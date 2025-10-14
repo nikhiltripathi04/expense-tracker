@@ -7,7 +7,7 @@
     "icon": "./assets/images/android-icon-foreground.png",
     "scheme": "expensetracker",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": false, // KEEP THIS AS FALSE
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.nikhil.tripathii.expensetracker",
@@ -41,6 +41,21 @@
           "backgroundColor": "#ffffff",
           "dark": {
             "backgroundColor": "#000000"
+          }
+        }
+      ],
+      // THIS IS THE CRITICAL FIX: Add this build properties config
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "newArchEnabled": false,
+            "extraGradleSettings": {
+              "excludeAsserts": [
+                "react-native-reanimated",
+                "react-native-worklets"
+              ]
+            }
           }
         }
       ]
