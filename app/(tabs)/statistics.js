@@ -1,17 +1,17 @@
-import React, { useContext, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Dimensions,
-  TouchableOpacity,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { PieChart, BarChart } from 'react-native-chart-kit';
-import { ExpenseContext } from '../../src/context/ExpenseContext';
+import { useContext, useState } from 'react';
+import {
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { BarChart, PieChart } from 'react-native-chart-kit';
 import { CATEGORIES } from '../../src/constants/categories';
 import { CURRENCIES } from '../../src/constants/currencies';
+import { ExpenseContext } from '../../src/context/ExpenseContext';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -147,7 +147,7 @@ export default function StatisticsScreen() {
         <Text style={styles.totalLabel}>
           Total ({timeFilter === 'all' ? 'All Time' : `This ${timeFilter}`})
         </Text>
-        <Text style={styles.totalAmount}>${totalFiltered.toFixed(2)}</Text>
+        <Text style={styles.totalAmount}>{currencySymbol}{totalFiltered.toFixed(2)}</Text>
         <Text style={styles.expenseCount}>
           {filteredExpenses.length} {filteredExpenses.length === 1 ? 'expense' : 'expenses'}
         </Text>
@@ -168,7 +168,7 @@ export default function StatisticsScreen() {
               <Text style={styles.chartTitle}>Spending by Category</Text>
               <PieChart
                 data={categoryData}
-                width={screenWidth - 32}
+                width={screenWidth - 52}
                 height={220}
                 chartConfig={chartConfig}
                 accessor="amount"
@@ -195,7 +195,7 @@ export default function StatisticsScreen() {
                     </View>
                     <View style={styles.categoryItemRight}>
                       <Text style={styles.categoryItemAmount}>
-                        ${item.amount.toFixed(2)}
+                        {currencySymbol}{item.amount.toFixed(2)}
                       </Text>
                       <Text style={styles.categoryItemPercentage}>{percentage}%</Text>
                     </View>
@@ -224,7 +224,7 @@ export default function StatisticsScreen() {
             <View style={styles.statCard}>
               <Ionicons name="calendar-outline" size={24} color="#6366F1" />
               <Text style={styles.statValue}>
-                ${(totalFiltered / Math.max(filteredExpenses.length, 1)).toFixed(2)}
+                {currencySymbol}{(totalFiltered / Math.max(filteredExpenses.length, 1)).toFixed(2)}
               </Text>
               <Text style={styles.statLabel}>Avg per Expense</Text>
             </View>
@@ -232,7 +232,7 @@ export default function StatisticsScreen() {
             <View style={styles.statCard}>
               <Ionicons name="trending-up-outline" size={24} color="#10B981" />
               <Text style={styles.statValue}>
-                {filteredExpenses.length > 0
+                {currencySymbol}{filteredExpenses.length > 0
                   ? Math.max(...filteredExpenses.map((e) => parseFloat(e.amount))).toFixed(2)
                   : '0.00'}
               </Text>
@@ -349,20 +349,24 @@ const styles = StyleSheet.create({
   categoryItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    flex: 1, // Allows this container to grow
+    marginRight: 8, // Adds space between the name and the amount
   },
   categoryDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
     marginRight: 12,
+    flexShrink: 0, // Prevents the dot from shrinking
   },
   categoryItemName: {
     fontSize: 14,
     color: '#64748B',
     fontWeight: '500',
+    flex: 1, // Allow text to wrap
   },
   categoryItemRight: {
+    flexShrink: 0, // Prevents the right side from shrinking
     alignItems: 'flex-end',
   },
   categoryItemAmount: {

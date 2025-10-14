@@ -1,37 +1,102 @@
-import React, { useState, useContext } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Platform,
-  Alert,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { ExpenseContext } from '../../src/context/ExpenseContext';
+import { useContext, useState } from 'react';
+import {
+  Alert,
+  Image,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { CATEGORIES } from '../../src/constants/categories';
 import { CURRENCIES } from '../../src/constants/currencies';
+import { ExpenseContext } from '../../src/context/ExpenseContext';
 
 export default function AddExpenseScreen() {
-  const { addExpense, currency } = useContext(ExpenseContext);
+  const { addExpense, currency } = useContext(ExpenseContext);
   const currencySymbol = CURRENCIES.find(c => c.code === currency)?.symbol || '₹';
   const router = useRouter();
-  
+
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [images, setImages] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
 
   const handleDateChange = (event, selectedDate) => {
     setShowDatePicker(Platform.OS === 'ios');
     if (selectedDate) {
       setDate(selectedDate);
     }
+  };
+
+  const pickFromGallery = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to make this work!');
+      return;
+    }
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.5,
+    });
+    if (!result.canceled) {
+      setImages([...images, result.assets[0].uri]);
+    }
+  };
+
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', 'Sorry, we need camera permissions to make this work!');
+      return;
+    }
+    let result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.5,
+    });
+    if (!result.canceled) {
+      setImages([...images, result.assets[0].uri]);
+    }
+  };
+
+  const handleImagePick = () => {
+    Alert.alert(
+      'Add Receipt Photo',
+      'Choose an option',
+      [
+        { text: 'Take Photo...', onPress: takePhoto },
+        { text: 'Choose from Library...', onPress: pickFromGallery },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  const openImageModal = (uri) => {
+    setSelectedImage(uri);
+    setModalVisible(true);
+  };
+
+  const closeImageModal = () => {
+    setModalVisible(false);
+    setSelectedImage(null);
+  };
+
+  const removeImage = (indexToRemove) => {
+    setImages(images.filter((_, index) => index !== indexToRemove));
   };
 
   const handleSubmit = () => {
@@ -53,6 +118,7 @@ export default function AddExpenseScreen() {
       description: description.trim(),
       categoryId: selectedCategory,
       date: date.toISOString(),
+      images: images,
     });
 
     setAmount('');
@@ -60,6 +126,7 @@ export default function AddExpenseScreen() {
     setSelectedCategory(null);
     setDate(new Date());
 
+    setImages([]);
     Alert.alert('Success', 'Expense added successfully!', [
       {
         text: 'OK',
@@ -156,6 +223,45 @@ export default function AddExpenseScreen() {
           />
         )}
 
+        {/* Receipt Photos */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Receipt Photos</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagePreviewContainer}>
+            {images.map((uri, index) => (
+              <View key={index} style={styles.imagePreviewWrapper}>
+                <TouchableOpacity onPress={() => openImageModal(uri)}>
+                  <Image source={{ uri }} style={styles.imagePreview} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.removeImageButton}
+                  onPress={() => removeImage(index)}
+                >
+                  <Ionicons name="close-circle" size={24} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
+            ))}
+            <TouchableOpacity style={styles.addPhotoButton} onPress={handleImagePick}>
+              <Ionicons name="camera-outline" size={32} color="#6366F1" />
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={closeImageModal}
+        >
+          <View style={styles.modalContainer}>
+            <TouchableOpacity style={styles.modalCloseButton} onPress={closeImageModal}>
+              <Ionicons name="close" size={32} color="#fff" />
+            </TouchableOpacity>
+            <Image
+              source={{ uri: selectedImage }}
+              style={styles.fullScreenImage}
+            />
+          </View>
+        </Modal>
         <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
           <Text style={styles.submitButtonText}>Add Expense</Text>
         </TouchableOpacity>
@@ -254,6 +360,37 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     fontWeight: '500',
   },
+  addPhotoButton: {
+    width: 100,
+    height: 100,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    borderStyle: 'dashed',
+  },
+  imagePreviewContainer: {
+    flexDirection: 'row',
+    marginTop: 8,
+  },
+  imagePreviewWrapper: {
+    position: 'relative',
+    marginRight: 10,
+  },
+  imagePreview: {
+    width: 100,
+    height: 100,
+    borderRadius: 12,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+  },
   submitButton: {
     backgroundColor: '#6366F1',
     borderRadius: 12,
@@ -270,5 +407,26 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullScreenImage: {
+    width: '90%',
+    height: '80%',
+    resizeMode: 'contain',
+    borderRadius: 12,
+  },
+  modalCloseButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 1,
+    padding: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 20,
   },
 });

@@ -1,19 +1,21 @@
-import React, { useContext, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Modal,
-  Alert,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ExpenseContext } from '../../src/context/ExpenseContext';
+import { useRouter } from 'expo-router';
+import { useContext, useState } from 'react';
+import {
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { CURRENCIES } from '../../src/constants/currencies';
+import { ExpenseContext } from '../../src/context/ExpenseContext';
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const { currency, changeCurrency, expenses, deleteExpense } = useContext(ExpenseContext);
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
 
@@ -63,6 +65,43 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={styles.container}>
+      {/* Budget Management Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Budget & Expenses</Text>
+        
+        <TouchableOpacity
+          style={styles.settingItem}
+          onPress={() => router.push('/budget-management')}
+        >
+          <View style={styles.settingItemLeft}>
+            <Ionicons name="wallet-outline" size={24} color="#10B981" />
+            <View style={styles.settingItemText}>
+              <Text style={styles.settingItemTitle}>Budget Management</Text>
+              <Text style={styles.settingItemSubtitle}>
+                Set and track category budgets
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#94A3B8" />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.settingItem}
+          onPress={() => router.push('/recurring-expenses')}
+        >
+          <View style={styles.settingItemLeft}>
+            <Ionicons name="repeat-outline" size={24} color="#8B5CF6" />
+            <View style={styles.settingItemText}>
+              <Text style={styles.settingItemTitle}>Recurring Expenses</Text>
+              <Text style={styles.settingItemSubtitle}>
+                Manage subscriptions and regular payments
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#94A3B8" />
+        </TouchableOpacity>
+      </View>
+
       {/* Currency Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Currency</Text>

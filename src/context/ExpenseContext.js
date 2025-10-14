@@ -1,5 +1,5 @@
-import React, { createContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createContext, useEffect, useState } from 'react';
 import { DEFAULT_CURRENCY } from '../constants/currencies';
 
 export const ExpenseContext = createContext();
@@ -9,10 +9,20 @@ export const ExpenseProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
   const [budgets, setBudgets] = useState({});
+  const [recurringExpenses, setRecurringExpenses] = useState([]);
 
   useEffect(() => {
     loadData();
   }, []);
+
+  // Check and generate recurring expenses daily
+  useEffect(() => {
+    if (!isLoading) {
+      handleRecurringExpenses();
+      const interval = setInterval(handleRecurringExpenses, 24 * 60 * 60 * 1000); // Check daily
+      return () => clearInterval(interval);
+    }
+  }, [isLoading, recurringExpenses]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -32,12 +42,19 @@ export const ExpenseProvider = ({ children }) => {
     }
   }, [budgets]);
 
+  useEffect(() => {
+    if (!isLoading) {
+      saveRecurringExpenses();
+    }
+  }, [recurringExpenses]);
+
   const loadData = async () => {
     try {
-      const [storedExpenses, storedCurrency, storedBudgets] = await Promise.all([
+      const [storedExpenses, storedCurrency, storedBudgets, storedRecurring] = await Promise.all([
         AsyncStorage.getItem('expenses'),
         AsyncStorage.getItem('currency'),
         AsyncStorage.getItem('budgets'),
+        AsyncStorage.getItem('recurringExpenses'),
       ]);
       
       if (storedExpenses) {
@@ -48,6 +65,9 @@ export const ExpenseProvider = ({ children }) => {
       }
       if (storedBudgets) {
         setBudgets(JSON.parse(storedBudgets));
+      }
+      if (storedRecurring) {
+        setRecurringExpenses(JSON.parse(storedRecurring));
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -78,6 +98,83 @@ export const ExpenseProvider = ({ children }) => {
     } catch (error) {
       console.error('Error saving budgets:', error);
     }
+  };
+
+  const saveRecurringExpenses = async () => {
+    try {
+      await AsyncStorage.setItem('recurringExpenses', JSON.stringify(recurringExpenses));
+    } catch (error) {
+      console.error('Error saving recurring expenses:', error);
+    }
+  };
+
+  const handleRecurringExpenses = () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    recurringExpenses.forEach((recurring) => {
+      const lastGenerated = new Date(recurring.lastGenerated);
+      let nextDate = new Date(lastGenerated);
+
+      switch (recurring.frequency) {
+        case 'daily':
+          nextDate.setDate(nextDate.getDate() + 1);
+          break;
+        case 'weekly':
+          nextDate.setDate(nextDate.getDate() + 7);
+          break;
+        case 'monthly':
+          nextDate.setMonth(nextDate.getMonth() + 1);
+          break;
+      }
+
+      // If next generation date is today or in the past, generate the expense
+      if (nextDate <= today) {
+        const newExpense = {
+          amount: recurring.amount,
+          categoryId: recurring.categoryId,
+          description: recurring.description,
+          date: new Date().toISOString(),
+          currency: currency,
+          isRecurring: true,
+          recurringId: recurring.id
+        };
+        addExpense(newExpense);
+
+        // Update last generated date
+        setRecurringExpenses(prevRecurring =>
+          prevRecurring.map(item =>
+            item.id === recurring.id
+              ? { ...item, lastGenerated: new Date().toISOString() }
+              : item
+          )
+        );
+      }
+    });
+  };
+
+  const addRecurringExpense = (expense) => {
+    const newRecurring = {
+      id: Date.now().toString(),
+      ...expense,
+      lastGenerated: new Date().toISOString(),
+      isActive: true
+    };
+    setRecurringExpenses([...recurringExpenses, newRecurring]);
+  };
+
+  const updateRecurringExpense = (id, updates) => {
+    setRecurringExpenses(prevRecurring =>
+      prevRecurring.map(item =>
+        item.id === id ? { ...item, ...updates } : item
+      )
+    );
+  };
+
+  const deleteRecurringExpense = (id) => {
+    setRecurringExpenses(prevRecurring =>
+      prevRecurring.filter(item => item.id !== id)
+    );
   };
 
   const addExpense = (expense) => {
@@ -186,6 +283,10 @@ export const ExpenseProvider = ({ children }) => {
         getBudget,
         getCategorySpending,
         getBudgetStatus,
+        recurringExpenses,
+        addRecurringExpense,
+        updateRecurringExpense,
+        deleteRecurringExpense,
       }}
     >
       {children}

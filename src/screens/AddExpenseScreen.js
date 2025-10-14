@@ -1,18 +1,18 @@
-import React, { useState, useContext } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { useContext, useState } from 'react';
 import {
-  View,
+  Alert,
+  Image,
+  Platform,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
-  StyleSheet,
   TouchableOpacity,
-  ScrollView,
-  Platform,
-  Alert,
+  View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { ExpenseContext } from '../context/ExpenseContext';
-import { CATEGORIES } from '../constants/categories';
 
 export default function AddExpenseScreen({ navigation }) {
   const { addExpense } = useContext(ExpenseContext);
@@ -22,12 +22,37 @@ export default function AddExpenseScreen({ navigation }) {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [images, setImages] = useState([]);
 
   const handleDateChange = (event, selectedDate) => {
     setShowDatePicker(Platform.OS === 'ios');
     if (selectedDate) {
       setDate(selectedDate);
     }
+  };
+
+  const handleImagePick = async () => {
+    // Request permissions
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to make this work!');
+      return;
+    }
+
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.5,
+    });
+
+    if (!result.canceled) {
+      setImages([...images, result.assets[0].uri]);
+    }
+  };
+
+  const removeImage = (indexToRemove) => {
+    setImages(images.filter((_, index) => index !== indexToRemove));
   };
 
   const handleSubmit = () => {
@@ -51,6 +76,7 @@ export default function AddExpenseScreen({ navigation }) {
       description: description.trim(),
       categoryId: selectedCategory,
       date: date.toISOString(),
+      images: images,
     });
 
     // Reset form
@@ -58,6 +84,7 @@ export default function AddExpenseScreen({ navigation }) {
     setDescription('');
     setSelectedCategory(null);
     setDate(new Date());
+    setImages([]);
 
     // Show success message
     Alert.alert('Success', 'Expense added successfully!', [
@@ -160,6 +187,28 @@ export default function AddExpenseScreen({ navigation }) {
           />
         )}
 
+        {/* Receipt Photos */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Receipt Photos</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagePreviewContainer}>
+            {images.map((uri, index) => (
+              <View key={index} style={styles.imagePreviewWrapper}>
+                <Image source={{ uri }} style={styles.imagePreview} />
+                <TouchableOpacity
+                  style={styles.removeImageButton}
+                  onPress={() => removeImage(index)}
+                >
+                  <Ionicons name="close-circle" size={24} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
+            ))}
+            <TouchableOpacity style={styles.addPhotoButton} onPress={handleImagePick}>
+              <Ionicons name="camera-outline" size={32} color="#6366F1" />
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+
+
         {/* Submit Button */}
         <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
           <Text style={styles.submitButtonText}>Add Expense</Text>
@@ -258,6 +307,37 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     marginLeft: 12,
     fontWeight: '500',
+  },
+  addPhotoButton: {
+    width: 100,
+    height: 100,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    borderStyle: 'dashed',
+  },
+  imagePreviewContainer: {
+    flexDirection: 'row',
+    marginTop: 8,
+  },
+  imagePreviewWrapper: {
+    position: 'relative',
+    marginRight: 10,
+  },
+  imagePreview: {
+    width: 100,
+    height: 100,
+    borderRadius: 12,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#fff',
+    borderRadius: 12,
   },
   submitButton: {
     backgroundColor: '#6366F1',
