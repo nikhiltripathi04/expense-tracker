@@ -7,8 +7,9 @@
     "icon": "./assets/images/android-icon-foreground.png",
     "scheme": "expensetracker",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false, // KEEP THIS AS FALSE
+    "newArchEnabled": true, // KEEP THIS AS FALSE
     "ios": {
+      "newArchEnabled": true,
       "supportsTablet": true,
       "bundleIdentifier": "com.nikhil.tripathii.expensetracker",
       "infoPlist": {
@@ -16,6 +17,7 @@
       }
     },
     "android": {
+      "newArchEnabled": true,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -46,18 +48,7 @@
       ],
       // THIS IS THE CRITICAL FIX: Add this build properties config
       [
-        "expo-build-properties",
-        {
-          "android": {
-            "newArchEnabled": false,
-            "extraGradleSettings": {
-              "excludeAsserts": [
-                "react-native-reanimated",
-                "react-native-worklets"
-              ]
-            }
-          }
-        }
+        "expo-build-properties"
       ]
     ],
     "experiments": {
